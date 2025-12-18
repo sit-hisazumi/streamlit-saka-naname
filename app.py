@@ -18,11 +18,11 @@ def initialize_dummy_data():
     # 製品マスタ
     if 'products' not in st.session_state:
         st.session_state.products = [
-            {"name": "製品A", "stock": 120, "unit": "個"},
-            {"name": "製品B", "stock": 85, "unit": "個"},
-            {"name": "製品C", "stock": 200, "unit": "個"},
-            {"name": "製品D", "stock": 45, "unit": "個"},
-            {"name": "製品E", "stock": 150, "unit": "個"},
+            {"name": "製品A", "stock": 220, "unit": "個"},
+            {"name": "製品B", "stock": 185, "unit": "個"},
+            {"name": "製品C", "stock": 300, "unit": "個"},
+            {"name": "製品D", "stock": 145, "unit": "個"},
+            {"name": "製品E", "stock": 250, "unit": "個"},
         ]
 
     # 注文リスト（ダミーデータ）
@@ -69,54 +69,142 @@ def initialize_dummy_data():
     if 'transactions' not in st.session_state:
         base_date = datetime.now()
         st.session_state.transactions = [
+            # 約10週間前から現在までのデータ
             {
-                "datetime": (base_date - timedelta(days=5, hours=10)).strftime("%Y-%m-%d %H:%M"),
+                "datetime": (base_date - timedelta(days=70, hours=10))
+                .strftime("%Y-%m-%d %H:%M"),
+                "type": "入庫",
+                "product": "製品A",
+                "quantity": 150,
+                "note": "製造完了分"
+            },
+            {
+                "datetime": (base_date - timedelta(days=65, hours=14))
+                .strftime("%Y-%m-%d %H:%M"),
+                "type": "出庫",
+                "product": "製品A",
+                "quantity": 80,
+                "note": "サンプル商事向け出荷"
+            },
+            {
+                "datetime": (base_date - timedelta(days=56, hours=9))
+                .strftime("%Y-%m-%d %H:%M"),
+                "type": "入庫",
+                "product": "製品C",
+                "quantity": 200,
+                "note": "製造完了分"
+            },
+            {
+                "datetime": (base_date - timedelta(days=49, hours=15))
+                .strftime("%Y-%m-%d %H:%M"),
+                "type": "出庫",
+                "product": "製品C",
+                "quantity": 100,
+                "note": "テスト工業向け出荷"
+            },
+            {
+                "datetime": (base_date - timedelta(days=42, hours=11))
+                .strftime("%Y-%m-%d %H:%M"),
+                "type": "入庫",
+                "product": "製品B",
+                "quantity": 120,
+                "note": "製造完了分"
+            },
+            {
+                "datetime": (base_date - timedelta(days=35, hours=13))
+                .strftime("%Y-%m-%d %H:%M"),
+                "type": "出庫",
+                "product": "製品B",
+                "quantity": 60,
+                "note": "ダミー株式会社向け出荷"
+            },
+            {
+                "datetime": (base_date - timedelta(days=28, hours=10))
+                .strftime("%Y-%m-%d %H:%M"),
+                "type": "入庫",
+                "product": "製品E",
+                "quantity": 180,
+                "note": "製造完了分"
+            },
+            {
+                "datetime": (base_date - timedelta(days=21, hours=16))
+                .strftime("%Y-%m-%d %H:%M"),
+                "type": "出庫",
+                "product": "製品E",
+                "quantity": 90,
+                "note": "サンプル物産向け出荷"
+            },
+            {
+                "datetime": (base_date - timedelta(days=14, hours=9))
+                .strftime("%Y-%m-%d %H:%M"),
+                "type": "入庫",
+                "product": "製品D",
+                "quantity": 100,
+                "note": "製造完了分"
+            },
+            {
+                "datetime": (base_date - timedelta(days=7, hours=14))
+                .strftime("%Y-%m-%d %H:%M"),
+                "type": "出庫",
+                "product": "製品D",
+                "quantity": 45,
+                "note": "テストトレーディング向け出荷"
+            },
+            {
+                "datetime": (base_date - timedelta(days=5, hours=10))
+                .strftime("%Y-%m-%d %H:%M"),
                 "type": "入庫",
                 "product": "製品A",
                 "quantity": 100,
                 "note": "製造完了分"
             },
             {
-                "datetime": (base_date - timedelta(days=5, hours=8)).strftime("%Y-%m-%d %H:%M"),
-                "type": "入庫",
-                "product": "製品C",
-                "quantity": 150,
-                "note": "製造完了分"
-            },
-            {
-                "datetime": (base_date - timedelta(days=4, hours=14)).strftime("%Y-%m-%d %H:%M"),
+                "datetime": (base_date - timedelta(days=4, hours=14))
+                .strftime("%Y-%m-%d %H:%M"),
                 "type": "出庫",
                 "product": "製品A",
                 "quantity": 50,
                 "note": "サンプル商事向け出荷"
             },
             {
-                "datetime": (base_date - timedelta(days=3, hours=9)).strftime("%Y-%m-%d %H:%M"),
+                "datetime": (base_date - timedelta(days=3, hours=9))
+                .strftime("%Y-%m-%d %H:%M"),
                 "type": "入庫",
                 "product": "製品B",
                 "quantity": 80,
                 "note": "製造完了分"
             },
             {
-                "datetime": (base_date - timedelta(days=2, hours=16)).strftime("%Y-%m-%d %H:%M"),
+                "datetime": (base_date - timedelta(days=2, hours=16))
+                .strftime("%Y-%m-%d %H:%M"),
                 "type": "出庫",
                 "product": "製品B",
                 "quantity": 30,
                 "note": "テスト工業向け出荷"
             },
             {
-                "datetime": (base_date - timedelta(days=1, hours=11)).strftime("%Y-%m-%d %H:%M"),
+                "datetime": (base_date - timedelta(days=1, hours=11))
+                .strftime("%Y-%m-%d %H:%M"),
                 "type": "入庫",
                 "product": "製品E",
                 "quantity": 120,
                 "note": "製造完了分"
             },
             {
-                "datetime": (base_date - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M"),
+                "datetime": (base_date - timedelta(hours=5))
+                .strftime("%Y-%m-%d %H:%M"),
                 "type": "出庫",
                 "product": "製品C",
                 "quantity": 50,
                 "note": "ダミー株式会社向け出荷"
+            },
+            {
+                "datetime": (base_date - timedelta(hours=2))
+                .strftime("%Y-%m-%d %H:%M"),
+                "type": "入庫",
+                "product": "製品A",
+                "quantity": 70,
+                "note": "製造完了分"
             },
         ]
 
@@ -317,9 +405,6 @@ else:
     product_info = next((p for p in st.session_state.products if p["name"] == selected_product), None)
 
     if product_info:
-        # メトリクス表示
-        col1, col2 = st.columns(2)
-
         # 製品関連のトランザクション
         product_transactions = [t for t in st.session_state.transactions if t["product"] == selected_product]
 
@@ -327,165 +412,177 @@ else:
         product_orders = [o for o in st.session_state.orders if o["product"] == selected_product]
         pending_quantity = sum([o["quantity"] for o in product_orders if o["status"] == "未出荷"])
 
-        with col1:
+        # 上段：メトリクスとクイック操作
+        top_col1, top_col2, top_col3 = st.columns([2, 2, 3])
+
+        with top_col1:
             st.metric("現在庫数", f"{product_info['stock']}{product_info['unit']}")
-        with col2:
+
+        with top_col2:
             st.metric("未出荷注文数", f"{pending_quantity}{product_info['unit']}")
 
-        st.markdown("---")
+        with top_col3:
+            # クイック操作をダイアログで実装
+            quick_col1, quick_col2 = st.columns(2)
+            with quick_col1:
+                if st.button("➕ 入庫", use_container_width=True, key="open_receipt_dialog"):
+                    st.session_state.show_receipt_dialog = True
 
-        # 在庫数推移グラフ
-        st.subheader("📈 在庫数推移")
+            with quick_col2:
+                if st.button("➖ 出庫", use_container_width=True, key="open_shipment_dialog"):
+                    st.session_state.show_shipment_dialog = True
 
-        if product_transactions:
-            # トランザクションデータをDataFrameに変換
-            trans_df = pd.DataFrame(product_transactions)
-            trans_df['datetime'] = pd.to_datetime(trans_df['datetime'])
-            trans_df = trans_df.sort_values('datetime')
+        # ダイアログ：入庫登録
+        if st.session_state.get('show_receipt_dialog', False):
+            with st.form("receipt_dialog_form"):
+                st.subheader("入庫登録")
+                receipt_qty = st.number_input("数量", min_value=1, value=10, key="dialog_receipt_qty")
+                receipt_note = st.text_input("備考", key="dialog_receipt_note")
 
-            # 在庫数の推移を計算（最新から過去に遡って計算）
-            # 現在の在庫数から逆算
-            current_stock = product_info['stock']
-            stock_history = []
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.form_submit_button("登録", use_container_width=True):
+                        product_info["stock"] += receipt_qty
+                        st.session_state.transactions.insert(0, {
+                            "datetime": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                            "type": "入庫",
+                            "product": selected_product,
+                            "quantity": receipt_qty,
+                            "note": receipt_note if receipt_note else "-"
+                        })
+                        st.session_state.show_receipt_dialog = False
+                        st.success(f"✅ {receipt_qty}{product_info['unit']}入庫しました")
+                        st.rerun()
+                with col2:
+                    if st.form_submit_button("キャンセル", use_container_width=True):
+                        st.session_state.show_receipt_dialog = False
+                        st.rerun()
 
-            # 最新のトランザクションから逆順に処理
-            for idx in range(len(trans_df) - 1, -1, -1):
-                row = trans_df.iloc[idx]
-                stock_history.insert(0, {
-                    'datetime': row['datetime'],
-                    'stock': current_stock,
-                    'type': row['type'],
-                    'quantity': row['quantity']
-                })
-                # 過去の在庫数を逆算
-                if row['type'] == '入庫':
-                    current_stock -= row['quantity']
-                else:  # 出庫
-                    current_stock += row['quantity']
-
-            # 最も古い時点の在庫も追加
-            if stock_history:
-                stock_history.insert(0, {
-                    'datetime': stock_history[0]['datetime'],
-                    'stock': current_stock,
-                    'type': '開始',
-                    'quantity': 0
-                })
-
-            stock_df = pd.DataFrame(stock_history)
-
-            # Altairで折れ線グラフ作成
-            line_chart = alt.Chart(stock_df).mark_line(
-                point=True,
-                color='#3498db'
-            ).encode(
-                x=alt.X('datetime:T', title='日時'),
-                y=alt.Y(
-                    'stock:Q',
-                    title='在庫数',
-                    scale=alt.Scale(domain=[0, stock_df['stock'].max() * 1.1])
-                ),
-                tooltip=['datetime:T', 'stock:Q', 'type:N', 'quantity:Q']
-            ).properties(
-                height=300
-            )
-
-            st.altair_chart(line_chart, use_container_width=True)
-        else:
-            st.info("まだ入出庫の履歴がありません")
-
-        st.markdown("---")
-
-        # 2カラムレイアウト
-        col1, col2 = st.columns(2)
-
-        with col1:
-            # 注文情報
-            st.subheader("📋 関連注文")
-
-            if product_orders:
-                orders_df = pd.DataFrame(product_orders)
-                st.dataframe(
-                    orders_df,
-                    use_container_width=True,
-                    hide_index=True
+        # ダイアログ：出庫登録
+        if st.session_state.get('show_shipment_dialog', False):
+            with st.form("shipment_dialog_form"):
+                st.subheader("出庫登録")
+                shipment_qty = st.number_input(
+                    f"数量（在庫: {product_info['stock']}{product_info['unit']}）",
+                    min_value=1,
+                    max_value=product_info['stock'] if product_info['stock'] > 0 else 1,
+                    value=min(10, product_info['stock']) if product_info['stock'] > 0 else 1,
+                    key="dialog_shipment_qty"
                 )
+                shipment_note = st.text_input("備考", key="dialog_shipment_note")
 
-                st.metric("未出荷注文数", f"{pending_quantity}{product_info['unit']}")
-            else:
-                st.info("この製品の注文はありません")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.form_submit_button("登録", use_container_width=True):
+                        if product_info['stock'] >= shipment_qty:
+                            product_info["stock"] -= shipment_qty
+                            st.session_state.transactions.insert(0, {
+                                "datetime": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                                "type": "出庫",
+                                "product": selected_product,
+                                "quantity": shipment_qty,
+                                "note": shipment_note if shipment_note else "-"
+                            })
+                            st.session_state.show_shipment_dialog = False
+                            st.success(f"✅ {shipment_qty}{product_info['unit']}出庫しました")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ 在庫不足です")
+                with col2:
+                    if st.form_submit_button("キャンセル", use_container_width=True):
+                        st.session_state.show_shipment_dialog = False
+                        st.rerun()
 
-        with col2:
-            # 入出庫履歴
-            st.subheader("📜 入出庫履歴（最新10件）")
+        st.markdown("---")
+
+        # 中段：グラフと入出庫履歴（2カラム）
+        mid_col1, mid_col2 = st.columns([3, 2])
+
+        with mid_col1:
+            st.subheader("📈 在庫数推移")
 
             if product_transactions:
-                trans_df = pd.DataFrame(product_transactions[:10])
+                # トランザクションデータをDataFrameに変換
+                trans_df = pd.DataFrame(product_transactions)
+                trans_df['datetime'] = pd.to_datetime(trans_df['datetime'])
+                trans_df = trans_df.sort_values('datetime')
+
+                # 在庫数の推移を計算
+                current_stock = product_info['stock']
+                stock_history = []
+
+                for idx in range(len(trans_df) - 1, -1, -1):
+                    row = trans_df.iloc[idx]
+                    stock_history.insert(0, {
+                        'datetime': row['datetime'],
+                        'stock': current_stock,
+                        'type': row['type'],
+                        'quantity': row['quantity']
+                    })
+                    if row['type'] == '入庫':
+                        current_stock -= row['quantity']
+                    else:
+                        current_stock += row['quantity']
+
+                if stock_history:
+                    stock_history.insert(0, {
+                        'datetime': stock_history[0]['datetime'],
+                        'stock': current_stock,
+                        'type': '開始',
+                        'quantity': 0
+                    })
+
+                stock_df = pd.DataFrame(stock_history)
+
+                # 折れ線グラフ（コンパクト版）
+                line_chart = alt.Chart(stock_df).mark_line(
+                    point=True,
+                    color='#3498db'
+                ).encode(
+                    x=alt.X('datetime:T', title='日時'),
+                    y=alt.Y(
+                        'stock:Q',
+                        title='在庫数',
+                        scale=alt.Scale(domain=[0, stock_df['stock'].max() * 1.1])
+                    ),
+                    tooltip=['datetime:T', 'stock:Q', 'type:N', 'quantity:Q']
+                ).properties(
+                    height=250
+                )
+
+                st.altair_chart(line_chart, use_container_width=True)
+            else:
+                st.info("まだ入出庫の履歴がありません")
+
+        with mid_col2:
+            st.subheader("📜 入出庫履歴")
+
+            if product_transactions:
+                trans_df = pd.DataFrame(product_transactions[:8])
                 st.dataframe(
                     trans_df[['datetime', 'type', 'quantity', 'note']],
                     use_container_width=True,
-                    hide_index=True
+                    hide_index=True,
+                    height=250
                 )
             else:
                 st.info("まだ入出庫の履歴がありません")
 
         st.markdown("---")
 
-        # クイック操作
-        st.subheader("⚡ クイック操作")
-        col1, col2 = st.columns(2)
+        # 下段：関連注文
+        st.subheader("📋 関連注文")
 
-        with col1:
-            with st.form("quick_receipt"):
-                st.write("**入庫登録**")
-                quick_receipt_qty = st.number_input(
-                    "入庫数",
-                    min_value=1,
-                    value=10,
-                    step=1,
-                    key="quick_receipt_qty"
-                )
-                quick_receipt_note = st.text_input("備考", key="quick_receipt_note")
-
-                if st.form_submit_button("入庫"):
-                    product_info["stock"] += quick_receipt_qty
-                    st.session_state.transactions.insert(0, {
-                        "datetime": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                        "type": "入庫",
-                        "product": selected_product,
-                        "quantity": quick_receipt_qty,
-                        "note": quick_receipt_note if quick_receipt_note else "-"
-                    })
-                    st.success(f"✅ {quick_receipt_qty}{product_info['unit']}入庫しました")
-                    st.rerun()
-
-        with col2:
-            with st.form("quick_shipment"):
-                st.write("**出庫登録**")
-                quick_shipment_qty = st.number_input(
-                    f"出庫数（在庫: {product_info['stock']}{product_info['unit']}）",
-                    min_value=1,
-                    max_value=product_info['stock'] if product_info['stock'] > 0 else 1,
-                    value=min(10, product_info['stock']) if product_info['stock'] > 0 else 1,
-                    step=1,
-                    key="quick_shipment_qty"
-                )
-                quick_shipment_note = st.text_input("備考", key="quick_shipment_note")
-
-                if st.form_submit_button("出庫"):
-                    if product_info['stock'] >= quick_shipment_qty:
-                        product_info["stock"] -= quick_shipment_qty
-                        st.session_state.transactions.insert(0, {
-                            "datetime": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                            "type": "出庫",
-                            "product": selected_product,
-                            "quantity": quick_shipment_qty,
-                            "note": quick_shipment_note if quick_shipment_note else "-"
-                        })
-                        st.success(f"✅ {quick_shipment_qty}{product_info['unit']}出庫しました")
-                        st.rerun()
-                    else:
-                        st.error(f"❌ 在庫不足です")
+        if product_orders:
+            orders_df = pd.DataFrame(product_orders)
+            st.dataframe(
+                orders_df[['customer', 'quantity', 'delivery_date', 'status']],
+                use_container_width=True,
+                hide_index=True,
+                height=200
+            )
+        else:
+            st.info("この製品の注文はありません")
 
 # フッター
 st.markdown("---")
