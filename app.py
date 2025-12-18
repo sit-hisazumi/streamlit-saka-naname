@@ -215,7 +215,7 @@ initialize_dummy_data()
 st.sidebar.title("📋 メニュー")
 view_mode = st.sidebar.radio(
     "表示モード",
-    ["ダッシュボード", "製品詳細"]
+    ["ダッシュボード", "製品詳細", "出荷担当", "製造担当", "営業担当"]
 )
 
 # 製品詳細モードの場合、製品選択
@@ -230,16 +230,21 @@ if view_mode == "製品詳細":
 # ヘッダー
 if view_mode == "ダッシュボード":
     st.title("🏭 工場在庫管理ダッシュボード")
-else:
+elif view_mode == "製品詳細":
     st.title(f"🔍 製品詳細: {selected_product}")
+elif view_mode == "出荷担当":
+    st.title("📦 出荷担当画面")
+elif view_mode == "製造担当":
+    st.title("🏗️ 製造担当画面")
+elif view_mode == "営業担当":
+    st.title("💼 営業担当画面")
 st.markdown("---")
 
 # ダッシュボード表示
 if view_mode == "ダッシュボード":
     # メトリクス表示
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
 
-    total_stock = sum([p["stock"] for p in st.session_state.products])
     today = datetime.now().date()
     today_receipts = sum([t["quantity"] for t in st.session_state.transactions
                           if t["type"] == "入庫" and datetime.strptime(t["datetime"], "%Y-%m-%d %H:%M").date() == today])
@@ -248,12 +253,10 @@ if view_mode == "ダッシュボード":
     pending_orders = len([o for o in st.session_state.orders if o["status"] == "未出荷"])
 
     with col1:
-        st.metric("総在庫数", f"{total_stock}個")
-    with col2:
         st.metric("本日の入庫", f"{today_receipts}個")
-    with col3:
+    with col2:
         st.metric("本日の出庫", f"{today_shipments}個")
-    with col4:
+    with col3:
         st.metric("未出荷注文", f"{pending_orders}件")
 
     st.markdown("---")
@@ -400,7 +403,7 @@ if view_mode == "ダッシュボード":
     )
 
 # 製品詳細表示
-else:
+elif view_mode == "製品詳細":
     # 選択した製品の情報を取得
     product_info = next((p for p in st.session_state.products if p["name"] == selected_product), None)
 
@@ -583,6 +586,290 @@ else:
             )
         else:
             st.info("この製品の注文はありません")
+
+# 出荷担当画面
+elif view_mode == "出荷担当":
+    # メトリクス表示
+    col1, col2, col3 = st.columns(3)
+
+    pending_orders = [o for o in st.session_state.orders if o["status"] == "未出荷"]
+    today = datetime.now().date()
+    today_shipments = sum([t["quantity"] for t in st.session_state.transactions
+                           if t["type"] == "出庫" and datetime.strptime(t["datetime"], "%Y-%m-%d %H:%M").date() == today])
+    total_pending_qty = sum([o["quantity"] for o in pending_orders])
+
+    with col1:
+        st.metric("未出荷注文", f"{len(pending_orders)}件")
+    with col2:
+        st.metric("未出荷数量", f"{total_pending_qty}個")
+    with col3:
+        st.metric("本日出庫数", f"{today_shipments}個")
+
+    st.markdown("---")
+
+    # 未出荷注文リスト（優先表示）
+    st.subheader("📦 未出荷注文リスト")
+
+    if pending_orders:
+        # 納期順にソート
+        pending_orders_sorted = sorted(pending_orders, key=lambda x: x["delivery_date"])
+        orders_df = pd.DataFrame(pending_orders_sorted)
+
+        st.dataframe(
+            orders_df,
+            use_container_width=True,
+            hide_index=True,
+            height=300
+        )
+    else:
+        st.info("未出荷の注文はありません")
+
+    st.markdown("---")
+
+    # 2カラム：在庫状況と出庫履歴
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.subheader("📊 製品在庫状況")
+        products_df = pd.DataFrame(st.session_state.products)
+
+        # 在庫が少ない順にソート
+        products_df_sorted = products_df.sort_values('stock')
+
+        st.dataframe(
+            products_df_sorted,
+            use_container_width=True,
+            hide_index=True,
+            height=300
+        )
+
+    with col2:
+        st.subheader("📤 本日の出庫履歴")
+
+        today_shipments_list = [t for t in st.session_state.transactions
+                                if t["type"] == "出庫" and datetime.strptime(t["datetime"], "%Y-%m-%d %H:%M").date() == today]
+
+        if today_shipments_list:
+            shipments_df = pd.DataFrame(today_shipments_list)
+            st.dataframe(
+                shipments_df[['datetime', 'product', 'quantity', 'note']],
+                use_container_width=True,
+                hide_index=True,
+                height=300
+            )
+        else:
+            st.info("本日の出庫履歴はまだありません")
+
+# 製造担当画面
+elif view_mode == "製造担当":
+    # メトリクス表示
+    col1, col2, col3 = st.columns(3)
+
+    total_stock = sum([p["stock"] for p in st.session_state.products])
+    today = datetime.now().date()
+    today_receipts = sum([t["quantity"] for t in st.session_state.transactions
+                          if t["type"] == "入庫" and datetime.strptime(t["datetime"], "%Y-%m-%d %H:%M").date() == today])
+    week_receipts = sum([t["quantity"] for t in st.session_state.transactions
+                         if t["type"] == "入庫" and
+                         (datetime.now() - datetime.strptime(t["datetime"], "%Y-%m-%d %H:%M")).days <= 7])
+
+    with col1:
+        st.metric("総在庫数", f"{total_stock}個")
+    with col2:
+        st.metric("本日入庫数", f"{today_receipts}個")
+    with col3:
+        st.metric("今週入庫数", f"{week_receipts}個")
+
+    st.markdown("---")
+
+    # 製品別在庫状況（棒グラフ）
+    st.subheader("📊 製品別在庫状況")
+
+    products_df = pd.DataFrame(st.session_state.products)
+
+    chart = alt.Chart(products_df).mark_bar().encode(
+        x=alt.X('name:N', title='製品名', sort=None),
+        y=alt.Y('stock:Q', title='在庫数'),
+        color=alt.Color('name:N', legend=None, scale=alt.Scale(scheme='category10')),
+        tooltip=['name', 'stock', 'unit']
+    ).properties(
+        height=300
+    )
+
+    st.altair_chart(chart, use_container_width=True)
+
+    st.markdown("---")
+
+    # 2カラム：入庫フォームと履歴
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.subheader("➕ 入庫登録")
+        with st.form("manufacturing_receipt_form"):
+            receipt_product = st.selectbox(
+                "製品を選択",
+                [p["name"] for p in st.session_state.products],
+                key="mfg_receipt_product"
+            )
+            receipt_quantity = st.number_input(
+                "入庫数",
+                min_value=1,
+                value=10,
+                step=1,
+                key="mfg_receipt_quantity"
+            )
+            receipt_note = st.text_input(
+                "備考（任意）",
+                key="mfg_receipt_note",
+                value="製造完了分"
+            )
+            receipt_submit = st.form_submit_button("入庫を登録")
+
+            if receipt_submit:
+                # 在庫更新
+                for product in st.session_state.products:
+                    if product["name"] == receipt_product:
+                        product["stock"] += receipt_quantity
+
+                # 履歴追加
+                st.session_state.transactions.insert(0, {
+                    "datetime": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    "type": "入庫",
+                    "product": receipt_product,
+                    "quantity": receipt_quantity,
+                    "note": receipt_note if receipt_note else "-"
+                })
+
+                st.success(f"✅ {receipt_product}を{receipt_quantity}個入庫しました")
+                st.rerun()
+
+    with col2:
+        st.subheader("📥 最近の入庫履歴")
+
+        recent_receipts = [t for t in st.session_state.transactions if t["type"] == "入庫"][:10]
+
+        if recent_receipts:
+            receipts_df = pd.DataFrame(recent_receipts)
+            st.dataframe(
+                receipts_df[['datetime', 'product', 'quantity', 'note']],
+                use_container_width=True,
+                hide_index=True,
+                height=300
+            )
+        else:
+            st.info("入庫履歴はまだありません")
+
+# 営業担当画面
+elif view_mode == "営業担当":
+    # メトリクス表示
+    col1, col2, col3 = st.columns(3)
+
+    total_orders = len(st.session_state.orders)
+    pending_orders = len([o for o in st.session_state.orders if o["status"] == "未出荷"])
+    shipped_orders = len([o for o in st.session_state.orders if o["status"] == "出荷済み"])
+
+    with col1:
+        st.metric("総注文数", f"{total_orders}件")
+    with col2:
+        st.metric("未出荷", f"{pending_orders}件")
+    with col3:
+        st.metric("出荷済み", f"{shipped_orders}件")
+
+    st.markdown("---")
+
+    # 注文一覧
+    st.subheader("📋 注文一覧")
+
+    # ステータス別にタブ表示
+    tab1, tab2, tab3 = st.tabs(["すべて", "未出荷", "出荷済み"])
+
+    with tab1:
+        orders_df = pd.DataFrame(st.session_state.orders)
+        st.dataframe(
+            orders_df,
+            use_container_width=True,
+            hide_index=True,
+            height=300
+        )
+
+    with tab2:
+        pending = [o for o in st.session_state.orders if o["status"] == "未出荷"]
+        if pending:
+            pending_df = pd.DataFrame(pending)
+            st.dataframe(
+                pending_df,
+                use_container_width=True,
+                hide_index=True,
+                height=300
+            )
+        else:
+            st.info("未出荷の注文はありません")
+
+    with tab3:
+        shipped = [o for o in st.session_state.orders if o["status"] == "出荷済み"]
+        if shipped:
+            shipped_df = pd.DataFrame(shipped)
+            st.dataframe(
+                shipped_df,
+                use_container_width=True,
+                hide_index=True,
+                height=300
+            )
+        else:
+            st.info("出荷済みの注文はありません")
+
+    st.markdown("---")
+
+    # 2カラム：製品別在庫と納期カレンダー
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.subheader("📦 製品別在庫状況")
+
+        products_df = pd.DataFrame(st.session_state.products)
+
+        # 各製品の未出荷注文数を計算
+        for idx, product in enumerate(st.session_state.products):
+            pending_qty = sum([o["quantity"] for o in st.session_state.orders
+                             if o["product"] == product["name"] and o["status"] == "未出荷"])
+            products_df.loc[idx, "pending"] = pending_qty
+
+        st.dataframe(
+            products_df[['name', 'stock', 'pending', 'unit']],
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "name": "製品名",
+                "stock": "在庫数",
+                "pending": "未出荷数",
+                "unit": "単位"
+            },
+            height=300
+        )
+
+    with col2:
+        st.subheader("📅 納期予定")
+
+        # 未出荷注文を納期順にソート
+        pending_orders_list = [o for o in st.session_state.orders if o["status"] == "未出荷"]
+        pending_orders_sorted = sorted(pending_orders_list, key=lambda x: x["delivery_date"])
+
+        if pending_orders_sorted:
+            delivery_df = pd.DataFrame(pending_orders_sorted)
+            st.dataframe(
+                delivery_df[['delivery_date', 'customer', 'product', 'quantity']],
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "delivery_date": "納期",
+                    "customer": "顧客",
+                    "product": "製品",
+                    "quantity": "数量"
+                },
+                height=300
+            )
+        else:
+            st.info("納期予定はありません")
 
 # フッター
 st.markdown("---")
