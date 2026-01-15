@@ -1,8 +1,14 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
-import random
 import altair as alt
+import plotly.express as px
+from models.dummy_data import (
+    initialize_session_state,
+    MACHINE_INSTANCES,
+)
+from models import PRODUCTION_SCHEDULES, MAINTENANCE_SCHEDULES
+from models.schedule import MaintenanceSchedule
 
 # ページ設定
 st.set_page_config(
@@ -11,205 +17,192 @@ st.set_page_config(
     layout="wide"
 )
 
-# 初期ダミーデータの作成
-def initialize_dummy_data():
-    """初期データとダミーデータを作成"""
+# ヘルパー関数
+def prepare_gantt_data(production_schedules):
+    """ProductionScheduleオブジェクトをPlotlyガントチャート用のDataFrame形式に変換"""
+    gantt_data = []
 
-    # 製品マスタ
-    if 'products' not in st.session_state:
-        st.session_state.products = [
-            {"name": "製品A", "stock": 220, "unit": "個"},
-            {"name": "製品B", "stock": 185, "unit": "個"},
-            {"name": "製品C", "stock": 300, "unit": "個"},
-            {"name": "製品D", "stock": 145, "unit": "個"},
-            {"name": "製品E", "stock": 250, "unit": "個"},
-        ]
+    for schedule in production_schedules:
+        gantt_data.append({
+            'Task': schedule.machine_instance.instance_name,
+            'Start': schedule.start_time,
+            'Finish': schedule.end_time,
+            'Resource': schedule.product_name,
+            'Description': f"{schedule.product_name} ({schedule.quantity}個)"
+        })
 
-    # 注文リスト（ダミーデータ）
-    if 'orders' not in st.session_state:
-        st.session_state.orders = [
-            {
-                "customer": "株式会社サンプル商事",
-                "product": "製品A",
-                "quantity": 30,
-                "delivery_date": "2025-12-20",
-                "status": "未出荷"
-            },
-            {
-                "customer": "テスト工業株式会社",
-                "product": "製品B",
-                "quantity": 50,
-                "delivery_date": "2025-12-22",
-                "status": "未出荷"
-            },
-            {
-                "customer": "ダミー株式会社",
-                "product": "製品C",
-                "quantity": 100,
-                "delivery_date": "2025-12-25",
-                "status": "未出荷"
-            },
-            {
-                "customer": "サンプル物産",
-                "product": "製品A",
-                "quantity": 20,
-                "delivery_date": "2025-12-19",
-                "status": "出荷済"
-            },
-            {
-                "customer": "テストトレーディング",
-                "product": "製品E",
-                "quantity": 75,
-                "delivery_date": "2025-12-28",
-                "status": "未出荷"
-            },
-        ]
+    return pd.DataFrame(gantt_data)
 
-    # 入出庫履歴（ダミーデータ）
-    if 'transactions' not in st.session_state:
-        base_date = datetime.now()
-        st.session_state.transactions = [
-            # 約10週間前から現在までのデータ
-            {
-                "datetime": (base_date - timedelta(days=70, hours=10))
-                .strftime("%Y-%m-%d %H:%M"),
-                "type": "入庫",
-                "product": "製品A",
-                "quantity": 150,
-                "note": "製造完了分"
-            },
-            {
-                "datetime": (base_date - timedelta(days=65, hours=14))
-                .strftime("%Y-%m-%d %H:%M"),
-                "type": "出庫",
-                "product": "製品A",
-                "quantity": 80,
-                "note": "サンプル商事向け出荷"
-            },
-            {
-                "datetime": (base_date - timedelta(days=56, hours=9))
-                .strftime("%Y-%m-%d %H:%M"),
-                "type": "入庫",
-                "product": "製品C",
-                "quantity": 200,
-                "note": "製造完了分"
-            },
-            {
-                "datetime": (base_date - timedelta(days=49, hours=15))
-                .strftime("%Y-%m-%d %H:%M"),
-                "type": "出庫",
-                "product": "製品C",
-                "quantity": 100,
-                "note": "テスト工業向け出荷"
-            },
-            {
-                "datetime": (base_date - timedelta(days=42, hours=11))
-                .strftime("%Y-%m-%d %H:%M"),
-                "type": "入庫",
-                "product": "製品B",
-                "quantity": 120,
-                "note": "製造完了分"
-            },
-            {
-                "datetime": (base_date - timedelta(days=35, hours=13))
-                .strftime("%Y-%m-%d %H:%M"),
-                "type": "出庫",
-                "product": "製品B",
-                "quantity": 60,
-                "note": "ダミー株式会社向け出荷"
-            },
-            {
-                "datetime": (base_date - timedelta(days=28, hours=10))
-                .strftime("%Y-%m-%d %H:%M"),
-                "type": "入庫",
-                "product": "製品E",
-                "quantity": 180,
-                "note": "製造完了分"
-            },
-            {
-                "datetime": (base_date - timedelta(days=21, hours=16))
-                .strftime("%Y-%m-%d %H:%M"),
-                "type": "出庫",
-                "product": "製品E",
-                "quantity": 90,
-                "note": "サンプル物産向け出荷"
-            },
-            {
-                "datetime": (base_date - timedelta(days=14, hours=9))
-                .strftime("%Y-%m-%d %H:%M"),
-                "type": "入庫",
-                "product": "製品D",
-                "quantity": 100,
-                "note": "製造完了分"
-            },
-            {
-                "datetime": (base_date - timedelta(days=7, hours=14))
-                .strftime("%Y-%m-%d %H:%M"),
-                "type": "出庫",
-                "product": "製品D",
-                "quantity": 45,
-                "note": "テストトレーディング向け出荷"
-            },
-            {
-                "datetime": (base_date - timedelta(days=5, hours=10))
-                .strftime("%Y-%m-%d %H:%M"),
-                "type": "入庫",
-                "product": "製品A",
-                "quantity": 100,
-                "note": "製造完了分"
-            },
-            {
-                "datetime": (base_date - timedelta(days=4, hours=14))
-                .strftime("%Y-%m-%d %H:%M"),
-                "type": "出庫",
-                "product": "製品A",
-                "quantity": 50,
-                "note": "サンプル商事向け出荷"
-            },
-            {
-                "datetime": (base_date - timedelta(days=3, hours=9))
-                .strftime("%Y-%m-%d %H:%M"),
-                "type": "入庫",
-                "product": "製品B",
-                "quantity": 80,
-                "note": "製造完了分"
-            },
-            {
-                "datetime": (base_date - timedelta(days=2, hours=16))
-                .strftime("%Y-%m-%d %H:%M"),
-                "type": "出庫",
-                "product": "製品B",
-                "quantity": 30,
-                "note": "テスト工業向け出荷"
-            },
-            {
-                "datetime": (base_date - timedelta(days=1, hours=11))
-                .strftime("%Y-%m-%d %H:%M"),
-                "type": "入庫",
-                "product": "製品E",
-                "quantity": 120,
-                "note": "製造完了分"
-            },
-            {
-                "datetime": (base_date - timedelta(hours=5))
-                .strftime("%Y-%m-%d %H:%M"),
-                "type": "出庫",
-                "product": "製品C",
-                "quantity": 50,
-                "note": "ダミー株式会社向け出荷"
-            },
-            {
-                "datetime": (base_date - timedelta(hours=2))
-                .strftime("%Y-%m-%d %H:%M"),
-                "type": "入庫",
-                "product": "製品A",
-                "quantity": 70,
-                "note": "製造完了分"
-            },
-        ]
+def create_production_gantt_chart():
+    """1ヶ月間の生産スケジュールをガントチャート形式で表示"""
+    # 現在日から1ヶ月後までのスケジュールをフィルタリング
+    today = datetime.now()
+    one_month_later = today + timedelta(days=30)
+
+    filtered_production = [
+        s for s in PRODUCTION_SCHEDULES
+        if today <= datetime.fromisoformat(s.start_time) <= one_month_later
+    ]
+
+    # データが空の場合は空のDataFrameを返す
+    if not filtered_production:
+        return None
+
+    # ガントチャート用データを準備
+    gantt_df = prepare_gantt_data(filtered_production)
+
+    # Plotlyタイムラインチャートを作成
+    fig = px.timeline(
+        gantt_df,
+        x_start="Start",
+        x_end="Finish",
+        y="Task",
+        color="Resource",
+        text="Description",
+        color_discrete_map={
+            '製品A': '#1f77b4',  # 青
+            '製品B': '#ff7f0e',  # オレンジ
+            '製品C': '#2ca02c',  # 緑
+            '製品D': '#d62728',  # 赤
+            '製品E': '#9467bd'   # 紫
+        },
+        category_orders={
+            'Task': ['A-1', 'A-2', 'B-1', 'B-2', 'B-3']  # 加工機の順序を固定
+        }
+    )
+
+    # レイアウトをカスタマイズ
+    fig.update_layout(
+        xaxis_title="日時",
+        yaxis_title="加工機",
+        height=400,
+        showlegend=True,
+        legend_title_text="製品",
+        hovermode='closest',
+        font=dict(family="Arial, sans-serif", size=12)
+    )
+
+    # X軸の表示範囲とフォーマット、グリッド線を設定
+    fig.update_xaxes(
+        range=[today.isoformat(), one_month_later.isoformat()],
+        tickformat="%m/%d",
+        showgrid=True,
+        gridcolor='lightgray',
+        gridwidth=1,
+        dtick=86400000  # 1日ごとにグリッド線を表示 (ミリ秒単位)
+    )
+
+    # Y軸にもグリッド線を設定
+    fig.update_yaxes(
+        showgrid=True,
+        gridcolor='lightgray',
+        gridwidth=1
+    )
+
+    return fig
+
+def create_sales_gantt_chart():
+    """営業担当用: 製造スケジュールとメンテナンススケジュールを含むガントチャート"""
+    # 現在日から1ヶ月後までのスケジュールをフィルタリング
+    today = datetime.now()
+    one_month_later = today + timedelta(days=30)
+
+    # 製造スケジュールをフィルタリング
+    filtered_production = [
+        s for s in PRODUCTION_SCHEDULES
+        if today <= datetime.fromisoformat(s.start_time) <= one_month_later
+    ]
+
+    # メンテナンススケジュールをフィルタリング
+    # グローバルのダミーデータとユーザー入力を統合
+    user_maintenance = st.session_state.get('maintenance_schedules', [])
+    all_maintenance = MAINTENANCE_SCHEDULES + user_maintenance
+    filtered_maintenance = [
+        s for s in all_maintenance
+        if today <= datetime.fromisoformat(s.start_time) <= one_month_later
+    ]
+
+    # データが空の場合
+    if not filtered_production and not filtered_maintenance:
+        return None
+
+    # ガントチャート用データを準備
+    gantt_data = []
+
+    # 製造スケジュールを追加
+    for schedule in filtered_production:
+        gantt_data.append({
+            'Task': schedule.machine_instance.instance_name,
+            'Start': schedule.start_time,
+            'Finish': schedule.end_time,
+            'Resource': schedule.product_name,
+            'Description': f"{schedule.product_name} ({schedule.quantity}個)"
+        })
+
+    # メンテナンススケジュールを追加
+    for schedule in filtered_maintenance:
+        gantt_data.append({
+            'Task': schedule.machine_instance.instance_name,
+            'Start': schedule.start_time,
+            'Finish': schedule.end_time,
+            'Resource': 'メンテナンス',
+            'Description': f"{schedule.maintenance_type}"
+        })
+
+    gantt_df = pd.DataFrame(gantt_data)
+
+    # Plotlyタイムラインチャートを作成
+    fig = px.timeline(
+        gantt_df,
+        x_start="Start",
+        x_end="Finish",
+        y="Task",
+        color="Resource",
+        text="Description",
+        color_discrete_map={
+            '製品A': '#1f77b4',
+            '製品B': '#ff7f0e',
+            '製品C': '#2ca02c',
+            '製品D': '#d62728',
+            '製品E': '#9467bd',
+            'メンテナンス': '#7f7f7f'  # グレー
+        },
+        category_orders={
+            'Task': ['A-1', 'A-2', 'B-1', 'B-2', 'B-3']
+        }
+    )
+
+    # レイアウトをカスタマイズ
+    fig.update_layout(
+        xaxis_title="日時",
+        yaxis_title="加工機",
+        height=400,
+        showlegend=True,
+        legend_title_text="製品/状態",
+        hovermode='closest',
+        font=dict(family="Arial, sans-serif", size=12)
+    )
+
+    # グリッド線を設定
+    fig.update_xaxes(
+        range=[today.isoformat(), one_month_later.isoformat()],
+        tickformat="%m/%d",
+        showgrid=True,
+        gridcolor='lightgray',
+        gridwidth=1,
+        dtick=86400000
+    )
+
+    fig.update_yaxes(
+        showgrid=True,
+        gridcolor='lightgray',
+        gridwidth=1
+    )
+
+    return fig
 
 # データ初期化
-initialize_dummy_data()
+initialize_session_state(st.session_state)
 
 # サイドバー：表示モード選択
 st.sidebar.title("📋 メニュー")
@@ -607,6 +600,17 @@ elif view_mode == "出荷担当":
 
     st.markdown("---")
 
+    # 生産スケジュール（ガントチャート）
+    st.subheader("📅 生産スケジュール(1ヶ月間)")
+    gantt_fig = create_production_gantt_chart()
+
+    if gantt_fig is not None:
+        st.plotly_chart(gantt_fig, use_container_width=True)
+    else:
+        st.info("現在の日付から1ヶ月間の生産スケジュールはありません")
+
+    st.markdown("---")
+
     # 未出荷注文リスト（優先表示）
     st.subheader("📦 未出荷注文リスト")
 
@@ -679,6 +683,155 @@ elif view_mode == "製造担当":
         st.metric("本日入庫数", f"{today_receipts}個")
     with col3:
         st.metric("今週入庫数", f"{week_receipts}個")
+
+    st.markdown("---")
+
+    # 生産・メンテナンススケジュール（ガントチャート）
+    st.subheader("📅 生産・メンテナンススケジュール(1ヶ月間)")
+    manufacturing_gantt_fig = create_sales_gantt_chart()
+
+    if manufacturing_gantt_fig is not None:
+        st.plotly_chart(manufacturing_gantt_fig, use_container_width=True)
+    else:
+        st.info("現在の日付から1ヶ月間のスケジュールはありません")
+
+    st.markdown("---")
+
+    # メンテナンススケジュール入力ボタンとフォーム
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.subheader("🔧 メンテナンススケジュール管理")
+    with col2:
+        toggle_label = (
+            "➕ メンテナンス入力"
+            if not st.session_state.get('show_maintenance_form', False)
+            else "✖️ 閉じる"
+        )
+        if st.button(toggle_label, key="toggle_maintenance_form"):
+            current_state = st.session_state.get('show_maintenance_form', False)
+            st.session_state.show_maintenance_form = not current_state
+            st.rerun()
+
+    # フォーム表示（トグルがTrueの場合のみ）
+    if st.session_state.get('show_maintenance_form', False):
+        with st.form("maintenance_schedule_form"):
+            st.write("**新規メンテナンススケジュール登録**")
+
+            # 加工機選択
+            machine_options = [
+                f"{m.instance_name} ({m.machine_type.name})"
+                for m in MACHINE_INSTANCES
+            ]
+            selected_machine_idx = st.selectbox(
+                "加工機を選択",
+                range(len(MACHINE_INSTANCES)),
+                format_func=lambda i: machine_options[i],
+                key="maint_machine"
+            )
+
+            # 日時入力（2カラム）
+            col1, col2 = st.columns(2)
+            with col1:
+                start_date = st.date_input("開始日", key="maint_start_date")
+                default_start_time = datetime.strptime("09:00", "%H:%M").time()
+                start_time = st.time_input(
+                    "開始時刻", value=default_start_time, key="maint_start_time"
+                )
+            with col2:
+                end_date = st.date_input("終了日", key="maint_end_date")
+                default_end_time = datetime.strptime("17:00", "%H:%M").time()
+                end_time = st.time_input(
+                    "終了時刻", value=default_end_time, key="maint_end_time"
+                )
+
+            # メンテナンス種別
+            maintenance_types = [
+                "大規模定期メンテナンス",
+                "小規模点検",
+                "緊急メンテナンス",
+                "その他"
+            ]
+            selected_type = st.selectbox(
+                "メンテナンス種別", maintenance_types, key="maint_type"
+            )
+
+            # カスタム種別入力（「その他」選択時）
+            custom_type = ""
+            if selected_type == "その他":
+                custom_type = st.text_input(
+                    "メンテナンス種別を入力", key="maint_custom_type"
+                )
+
+            # 送信ボタン
+            submitted = st.form_submit_button("登録")
+
+            if submitted:
+                # バリデーション
+                if start_date > end_date or (
+                    start_date == end_date and start_time >= end_time
+                ):
+                    st.error("❌ 終了日時は開始日時より後に設定してください")
+                elif selected_type == "その他" and not custom_type:
+                    st.error("❌ メンテナンス種別を入力してください")
+                else:
+                    # ISO 8601形式に変換
+                    start_datetime = datetime.combine(
+                        start_date, start_time
+                    ).isoformat()
+                    end_datetime = datetime.combine(
+                        end_date, end_time
+                    ).isoformat()
+
+                    # MaintenanceScheduleオブジェクト作成
+                    final_type = (
+                        custom_type if selected_type == "その他" else selected_type
+                    )
+                    new_schedule = MaintenanceSchedule(
+                        machine_instance=MACHINE_INSTANCES[selected_machine_idx],
+                        start_time=start_datetime,
+                        end_time=end_datetime,
+                        maintenance_type=final_type
+                    )
+
+                    # セッション状態に追加
+                    if 'maintenance_schedules' not in st.session_state:
+                        st.session_state.maintenance_schedules = []
+                    st.session_state.maintenance_schedules.append(new_schedule)
+
+                    # フォームを閉じる
+                    st.session_state.show_maintenance_form = False
+
+                    machine_name = MACHINE_INSTANCES[selected_machine_idx]
+                    success_msg = (
+                        f"✅ {machine_name.instance_name} の"
+                        f"メンテナンススケジュールを登録しました"
+                    )
+                    st.success(success_msg)
+                    st.rerun()
+
+    # 登録済みメンテナンススケジュール一覧
+    if st.session_state.get('maintenance_schedules'):
+        st.write("**登録済みメンテナンススケジュール**")
+
+        for idx, schedule in enumerate(st.session_state.maintenance_schedules):
+            col1, col2 = st.columns([5, 1])
+            with col1:
+                start_str = datetime.fromisoformat(
+                    schedule.start_time
+                ).strftime('%Y/%m/%d %H:%M')
+                end_str = datetime.fromisoformat(
+                    schedule.end_time
+                ).strftime('%Y/%m/%d %H:%M')
+                display_text = (
+                    f"🔧 {schedule.machine_instance.instance_name}: "
+                    f"{schedule.maintenance_type} "
+                    f"({start_str} - {end_str})"
+                )
+                st.text(display_text)
+            with col2:
+                if st.button("削除", key=f"delete_maint_{idx}"):
+                    st.session_state.maintenance_schedules.pop(idx)
+                    st.rerun()
 
     st.markdown("---")
 
@@ -774,6 +927,17 @@ elif view_mode == "営業担当":
         st.metric("未出荷", f"{pending_orders}件")
     with col3:
         st.metric("出荷済み", f"{shipped_orders}件")
+
+    st.markdown("---")
+
+    # 生産・メンテナンススケジュール（ガントチャート）
+    st.subheader("📅 生産・メンテナンススケジュール(1ヶ月間)")
+    sales_gantt_fig = create_sales_gantt_chart()
+
+    if sales_gantt_fig is not None:
+        st.plotly_chart(sales_gantt_fig, use_container_width=True)
+    else:
+        st.info("現在の日付から1ヶ月間のスケジュールはありません")
 
     st.markdown("---")
 
