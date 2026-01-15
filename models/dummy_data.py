@@ -622,3 +622,7 @@ def initialize_session_state(session_state):
     # 入出庫履歴
     if "transactions" not in session_state:
         session_state.transactions = get_transactions()
+
+    # メンテナンススケジュール（ダミーデータ + ユーザー入力分）
+    if "maintenance_schedules" not in session_state:
+        session_state.maintenance_schedules = []

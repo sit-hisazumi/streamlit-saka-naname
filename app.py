@@ -3,8 +3,12 @@ import pandas as pd
 from datetime import datetime, timedelta
 import altair as alt
 import plotly.express as px
-from models.dummy_data import initialize_session_state
+from models.dummy_data import (
+    initialize_session_state,
+    MACHINE_INSTANCES,
+)
 from models import PRODUCTION_SCHEDULES, MAINTENANCE_SCHEDULES
+from models.schedule import MaintenanceSchedule
 
 # ページ設定
 st.set_page_config(
@@ -110,8 +114,11 @@ def create_sales_gantt_chart():
     ]
 
     # メンテナンススケジュールをフィルタリング
+    # グローバルのダミーデータとユーザー入力を統合
+    user_maintenance = st.session_state.get('maintenance_schedules', [])
+    all_maintenance = MAINTENANCE_SCHEDULES + user_maintenance
     filtered_maintenance = [
-        s for s in MAINTENANCE_SCHEDULES
+        s for s in all_maintenance
         if today <= datetime.fromisoformat(s.start_time) <= one_month_later
     ]
 
@@ -687,6 +694,144 @@ elif view_mode == "製造担当":
         st.plotly_chart(manufacturing_gantt_fig, use_container_width=True)
     else:
         st.info("現在の日付から1ヶ月間のスケジュールはありません")
+
+    st.markdown("---")
+
+    # メンテナンススケジュール入力ボタンとフォーム
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.subheader("🔧 メンテナンススケジュール管理")
+    with col2:
+        toggle_label = (
+            "➕ メンテナンス入力"
+            if not st.session_state.get('show_maintenance_form', False)
+            else "✖️ 閉じる"
+        )
+        if st.button(toggle_label, key="toggle_maintenance_form"):
+            current_state = st.session_state.get('show_maintenance_form', False)
+            st.session_state.show_maintenance_form = not current_state
+            st.rerun()
+
+    # フォーム表示（トグルがTrueの場合のみ）
+    if st.session_state.get('show_maintenance_form', False):
+        with st.form("maintenance_schedule_form"):
+            st.write("**新規メンテナンススケジュール登録**")
+
+            # 加工機選択
+            machine_options = [
+                f"{m.instance_name} ({m.machine_type.name})"
+                for m in MACHINE_INSTANCES
+            ]
+            selected_machine_idx = st.selectbox(
+                "加工機を選択",
+                range(len(MACHINE_INSTANCES)),
+                format_func=lambda i: machine_options[i],
+                key="maint_machine"
+            )
+
+            # 日時入力（2カラム）
+            col1, col2 = st.columns(2)
+            with col1:
+                start_date = st.date_input("開始日", key="maint_start_date")
+                default_start_time = datetime.strptime("09:00", "%H:%M").time()
+                start_time = st.time_input(
+                    "開始時刻", value=default_start_time, key="maint_start_time"
+                )
+            with col2:
+                end_date = st.date_input("終了日", key="maint_end_date")
+                default_end_time = datetime.strptime("17:00", "%H:%M").time()
+                end_time = st.time_input(
+                    "終了時刻", value=default_end_time, key="maint_end_time"
+                )
+
+            # メンテナンス種別
+            maintenance_types = [
+                "大規模定期メンテナンス",
+                "小規模点検",
+                "緊急メンテナンス",
+                "その他"
+            ]
+            selected_type = st.selectbox(
+                "メンテナンス種別", maintenance_types, key="maint_type"
+            )
+
+            # カスタム種別入力（「その他」選択時）
+            custom_type = ""
+            if selected_type == "その他":
+                custom_type = st.text_input(
+                    "メンテナンス種別を入力", key="maint_custom_type"
+                )
+
+            # 送信ボタン
+            submitted = st.form_submit_button("登録")
+
+            if submitted:
+                # バリデーション
+                if start_date > end_date or (
+                    start_date == end_date and start_time >= end_time
+                ):
+                    st.error("❌ 終了日時は開始日時より後に設定してください")
+                elif selected_type == "その他" and not custom_type:
+                    st.error("❌ メンテナンス種別を入力してください")
+                else:
+                    # ISO 8601形式に変換
+                    start_datetime = datetime.combine(
+                        start_date, start_time
+                    ).isoformat()
+                    end_datetime = datetime.combine(
+                        end_date, end_time
+                    ).isoformat()
+
+                    # MaintenanceScheduleオブジェクト作成
+                    final_type = (
+                        custom_type if selected_type == "その他" else selected_type
+                    )
+                    new_schedule = MaintenanceSchedule(
+                        machine_instance=MACHINE_INSTANCES[selected_machine_idx],
+                        start_time=start_datetime,
+                        end_time=end_datetime,
+                        maintenance_type=final_type
+                    )
+
+                    # セッション状態に追加
+                    if 'maintenance_schedules' not in st.session_state:
+                        st.session_state.maintenance_schedules = []
+                    st.session_state.maintenance_schedules.append(new_schedule)
+
+                    # フォームを閉じる
+                    st.session_state.show_maintenance_form = False
+
+                    machine_name = MACHINE_INSTANCES[selected_machine_idx]
+                    success_msg = (
+                        f"✅ {machine_name.instance_name} の"
+                        f"メンテナンススケジュールを登録しました"
+                    )
+                    st.success(success_msg)
+                    st.rerun()
+
+    # 登録済みメンテナンススケジュール一覧
+    if st.session_state.get('maintenance_schedules'):
+        st.write("**登録済みメンテナンススケジュール**")
+
+        for idx, schedule in enumerate(st.session_state.maintenance_schedules):
+            col1, col2 = st.columns([5, 1])
+            with col1:
+                start_str = datetime.fromisoformat(
+                    schedule.start_time
+                ).strftime('%Y/%m/%d %H:%M')
+                end_str = datetime.fromisoformat(
+                    schedule.end_time
+                ).strftime('%Y/%m/%d %H:%M')
+                display_text = (
+                    f"🔧 {schedule.machine_instance.instance_name}: "
+                    f"{schedule.maintenance_type} "
+                    f"({start_str} - {end_str})"
+                )
+                st.text(display_text)
+            with col2:
+                if st.button("削除", key=f"delete_maint_{idx}"):
+                    st.session_state.maintenance_schedules.pop(idx)
+                    st.rerun()
 
     st.markdown("---")
 
