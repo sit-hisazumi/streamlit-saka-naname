@@ -97,6 +97,103 @@ def create_production_gantt_chart():
 
     return fig
 
+def create_sales_gantt_chart():
+    """営業担当用: 製造スケジュールとメンテナンススケジュールを含むガントチャート"""
+    # 現在日から1ヶ月後までのスケジュールをフィルタリング
+    today = datetime.now()
+    one_month_later = today + timedelta(days=30)
+
+    # 製造スケジュールをフィルタリング
+    filtered_production = [
+        s for s in PRODUCTION_SCHEDULES
+        if today <= datetime.fromisoformat(s.start_time) <= one_month_later
+    ]
+
+    # メンテナンススケジュールをフィルタリング
+    filtered_maintenance = [
+        s for s in MAINTENANCE_SCHEDULES
+        if today <= datetime.fromisoformat(s.start_time) <= one_month_later
+    ]
+
+    # データが空の場合
+    if not filtered_production and not filtered_maintenance:
+        return None
+
+    # ガントチャート用データを準備
+    gantt_data = []
+
+    # 製造スケジュールを追加
+    for schedule in filtered_production:
+        gantt_data.append({
+            'Task': schedule.machine_instance.instance_name,
+            'Start': schedule.start_time,
+            'Finish': schedule.end_time,
+            'Resource': schedule.product_name,
+            'Description': f"{schedule.product_name} ({schedule.quantity}個)"
+        })
+
+    # メンテナンススケジュールを追加
+    for schedule in filtered_maintenance:
+        gantt_data.append({
+            'Task': schedule.machine_instance.instance_name,
+            'Start': schedule.start_time,
+            'Finish': schedule.end_time,
+            'Resource': 'メンテナンス',
+            'Description': f"{schedule.maintenance_type}"
+        })
+
+    gantt_df = pd.DataFrame(gantt_data)
+
+    # Plotlyタイムラインチャートを作成
+    fig = px.timeline(
+        gantt_df,
+        x_start="Start",
+        x_end="Finish",
+        y="Task",
+        color="Resource",
+        text="Description",
+        color_discrete_map={
+            '製品A': '#1f77b4',
+            '製品B': '#ff7f0e',
+            '製品C': '#2ca02c',
+            '製品D': '#d62728',
+            '製品E': '#9467bd',
+            'メンテナンス': '#7f7f7f'  # グレー
+        },
+        category_orders={
+            'Task': ['A-1', 'A-2', 'B-1', 'B-2', 'B-3']
+        }
+    )
+
+    # レイアウトをカスタマイズ
+    fig.update_layout(
+        xaxis_title="日時",
+        yaxis_title="加工機",
+        height=400,
+        showlegend=True,
+        legend_title_text="製品/状態",
+        hovermode='closest',
+        font=dict(family="Arial, sans-serif", size=12)
+    )
+
+    # グリッド線を設定
+    fig.update_xaxes(
+        range=[today.isoformat(), one_month_later.isoformat()],
+        tickformat="%m/%d",
+        showgrid=True,
+        gridcolor='lightgray',
+        gridwidth=1,
+        dtick=86400000
+    )
+
+    fig.update_yaxes(
+        showgrid=True,
+        gridcolor='lightgray',
+        gridwidth=1
+    )
+
+    return fig
+
 # データ初期化
 initialize_session_state(st.session_state)
 
@@ -582,6 +679,17 @@ elif view_mode == "製造担当":
 
     st.markdown("---")
 
+    # 生産・メンテナンススケジュール（ガントチャート）
+    st.subheader("📅 生産・メンテナンススケジュール(1ヶ月間)")
+    manufacturing_gantt_fig = create_sales_gantt_chart()
+
+    if manufacturing_gantt_fig is not None:
+        st.plotly_chart(manufacturing_gantt_fig, use_container_width=True)
+    else:
+        st.info("現在の日付から1ヶ月間のスケジュールはありません")
+
+    st.markdown("---")
+
     # 製品別在庫状況（棒グラフ）
     st.subheader("📊 製品別在庫状況")
 
@@ -674,6 +782,17 @@ elif view_mode == "営業担当":
         st.metric("未出荷", f"{pending_orders}件")
     with col3:
         st.metric("出荷済み", f"{shipped_orders}件")
+
+    st.markdown("---")
+
+    # 生産・メンテナンススケジュール（ガントチャート）
+    st.subheader("📅 生産・メンテナンススケジュール(1ヶ月間)")
+    sales_gantt_fig = create_sales_gantt_chart()
+
+    if sales_gantt_fig is not None:
+        st.plotly_chart(sales_gantt_fig, use_container_width=True)
+    else:
+        st.info("現在の日付から1ヶ月間のスケジュールはありません")
 
     st.markdown("---")
 
