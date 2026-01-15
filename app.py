@@ -1,8 +1,10 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import altair as alt
+import plotly.express as px
 from models.dummy_data import initialize_session_state
+from models import PRODUCTION_SCHEDULES, MAINTENANCE_SCHEDULES
 
 # ページ設定
 st.set_page_config(
@@ -10,6 +12,90 @@ st.set_page_config(
     page_icon="🏭",
     layout="wide"
 )
+
+# ヘルパー関数
+def prepare_gantt_data(production_schedules):
+    """ProductionScheduleオブジェクトをPlotlyガントチャート用のDataFrame形式に変換"""
+    gantt_data = []
+
+    for schedule in production_schedules:
+        gantt_data.append({
+            'Task': schedule.machine_instance.instance_name,
+            'Start': schedule.start_time,
+            'Finish': schedule.end_time,
+            'Resource': schedule.product_name,
+            'Description': f"{schedule.product_name} ({schedule.quantity}個)"
+        })
+
+    return pd.DataFrame(gantt_data)
+
+def create_production_gantt_chart():
+    """1ヶ月間の生産スケジュールをガントチャート形式で表示"""
+    # 現在日から1ヶ月後までのスケジュールをフィルタリング
+    today = datetime.now()
+    one_month_later = today + timedelta(days=30)
+
+    filtered_production = [
+        s for s in PRODUCTION_SCHEDULES
+        if today <= datetime.fromisoformat(s.start_time) <= one_month_later
+    ]
+
+    # データが空の場合は空のDataFrameを返す
+    if not filtered_production:
+        return None
+
+    # ガントチャート用データを準備
+    gantt_df = prepare_gantt_data(filtered_production)
+
+    # Plotlyタイムラインチャートを作成
+    fig = px.timeline(
+        gantt_df,
+        x_start="Start",
+        x_end="Finish",
+        y="Task",
+        color="Resource",
+        text="Description",
+        color_discrete_map={
+            '製品A': '#1f77b4',  # 青
+            '製品B': '#ff7f0e',  # オレンジ
+            '製品C': '#2ca02c',  # 緑
+            '製品D': '#d62728',  # 赤
+            '製品E': '#9467bd'   # 紫
+        },
+        category_orders={
+            'Task': ['A-1', 'A-2', 'B-1', 'B-2', 'B-3']  # 加工機の順序を固定
+        }
+    )
+
+    # レイアウトをカスタマイズ
+    fig.update_layout(
+        xaxis_title="日時",
+        yaxis_title="加工機",
+        height=400,
+        showlegend=True,
+        legend_title_text="製品",
+        hovermode='closest',
+        font=dict(family="Arial, sans-serif", size=12)
+    )
+
+    # X軸の表示範囲とフォーマット、グリッド線を設定
+    fig.update_xaxes(
+        range=[today.isoformat(), one_month_later.isoformat()],
+        tickformat="%m/%d",
+        showgrid=True,
+        gridcolor='lightgray',
+        gridwidth=1,
+        dtick=86400000  # 1日ごとにグリッド線を表示 (ミリ秒単位)
+    )
+
+    # Y軸にもグリッド線を設定
+    fig.update_yaxes(
+        showgrid=True,
+        gridcolor='lightgray',
+        gridwidth=1
+    )
+
+    return fig
 
 # データ初期化
 initialize_session_state(st.session_state)
@@ -407,6 +493,17 @@ elif view_mode == "出荷担当":
         st.metric("未出荷数量", f"{total_pending_qty}個")
     with col3:
         st.metric("本日出庫数", f"{today_shipments}個")
+
+    st.markdown("---")
+
+    # 生産スケジュール（ガントチャート）
+    st.subheader("📅 生産スケジュール(1ヶ月間)")
+    gantt_fig = create_production_gantt_chart()
+
+    if gantt_fig is not None:
+        st.plotly_chart(gantt_fig, use_container_width=True)
+    else:
+        st.info("現在の日付から1ヶ月間の生産スケジュールはありません")
 
     st.markdown("---")
 
