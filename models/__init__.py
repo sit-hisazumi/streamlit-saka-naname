@@ -3,8 +3,8 @@ from models.dummy_data import (
     MACHINE_TYPE_A,
     MACHINE_TYPE_B,
     MACHINE_TYPES,
-    MAINTENANCE_SCHEDULES,
-    PRODUCTION_SCHEDULES,
+    get_maintenance_schedules,
+    get_production_schedules,
 )
 from models.equipment import MachineInstance, MachineType
 from models.schedule import MaintenanceSchedule, ProductionSchedule
@@ -18,6 +18,6 @@ __all__ = [
     "MACHINE_INSTANCES",
     "ProductionSchedule",
     "MaintenanceSchedule",
-    "PRODUCTION_SCHEDULES",
-    "MAINTENANCE_SCHEDULES",
+    "get_production_schedules",
+    "get_maintenance_schedules",
 ]

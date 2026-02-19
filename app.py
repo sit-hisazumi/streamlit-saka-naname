@@ -7,7 +7,7 @@ from models.dummy_data import (
     initialize_session_state,
     MACHINE_INSTANCES,
 )
-from models import PRODUCTION_SCHEDULES, MAINTENANCE_SCHEDULES
+from models import get_production_schedules, get_maintenance_schedules
 from models.schedule import MaintenanceSchedule
 
 # ページ設定
@@ -40,7 +40,7 @@ def create_production_gantt_chart():
     one_month_later = today + timedelta(days=30)
 
     filtered_production = [
-        s for s in PRODUCTION_SCHEDULES
+        s for s in get_production_schedules()
         if today <= datetime.fromisoformat(s.start_time) <= one_month_later
     ]
 
@@ -109,14 +109,14 @@ def create_sales_gantt_chart():
 
     # 製造スケジュールをフィルタリング
     filtered_production = [
-        s for s in PRODUCTION_SCHEDULES
+        s for s in get_production_schedules()
         if today <= datetime.fromisoformat(s.start_time) <= one_month_later
     ]
 
     # メンテナンススケジュールをフィルタリング
     # グローバルのダミーデータとユーザー入力を統合
     user_maintenance = st.session_state.get('maintenance_schedules', [])
-    all_maintenance = MAINTENANCE_SCHEDULES + user_maintenance
+    all_maintenance = get_maintenance_schedules() + user_maintenance
     filtered_maintenance = [
         s for s in all_maintenance
         if today <= datetime.fromisoformat(s.start_time) <= one_month_later
